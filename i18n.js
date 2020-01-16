@@ -1164,9 +1164,9 @@ class Factory {
     function logError(msg) {
       instance.logErrorFn(msg);
     }
-
-    return this.i18n;
   }
 }
 
-module.exports = exports.default = Factory;
+module.exports = exports.default = function(languagesCache) {
+  return new Factory(languagesCache).i18n;
+};
