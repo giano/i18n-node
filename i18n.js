@@ -131,7 +131,7 @@ class Factory {
       instance.preserveLegacyCase = typeof opt.preserveLegacyCase === 'undefined' ? true : opt.preserveLegacyCase;
 
       // when missing locales we try to guess that from directory
-      opt.locales = opt.locales || guessLocales(instance.instance.directory);
+      opt.locales = opt.locales || guessLocales(instance.directory);
 
       // implicitly read all locales
       if (Array.isArray(opt.locales)) {
@@ -215,7 +215,7 @@ class Factory {
 
     this.i18n.__mf = function i18nMessageformat(phrase) {
       var msg, mf, f;
-      var targetLocale = instance.instance.defaultLocale;
+      var targetLocale = instance.defaultLocale;
       var argv = parseArgv(arguments);
       var namedValues = argv[0];
       var args = argv[1];
