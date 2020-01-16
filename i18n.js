@@ -21,25 +21,23 @@ var vsprintf = require('sprintf-js').vsprintf,
   MakePlural = require('make-plural'),
   parseInterval = require('math-interval-parser').default;
 
-
 // exports an instance
-module.exports = (function() {
 
+const factory = function() {
   var MessageformatInstanceForLocale = {},
     PluralsForLocale = {},
-    locales = {},
     api = {
-      '__': '__',
-      '__n': '__n',
-      '__l': '__l',
-      '__h': '__h',
-      '__mf': '__mf',
-      'getLocale': 'getLocale',
-      'setLocale': 'setLocale',
-      'getCatalog': 'getCatalog',
-      'getLocales': 'getLocales',
-      'addLocale': 'addLocale',
-      'removeLocale': 'removeLocale'
+      __: '__',
+      __n: '__n',
+      __l: '__l',
+      __h: '__h',
+      __mf: '__mf',
+      getLocale: 'getLocale',
+      setLocale: 'setLocale',
+      getCatalog: 'getCatalog',
+      getLocales: 'getLocales',
+      addLocale: 'addLocale',
+      removeLocale: 'removeLocale'
     },
     pathsep = path.sep, // ---> means win support will be available in node 0.8.x and above
     autoReload,
@@ -62,14 +60,15 @@ module.exports = (function() {
     syncFiles;
 
   // public exports
-  var i18n = {};
+  var i18n = {
+    __locales__: {}
+  };
 
   i18n.version = '0.8.3';
 
   i18n.configure = function i18nConfigure(opt) {
-
-    // reset locales
-    locales = {};
+    // reset locales or inherit an external cache object
+    this.__locales__ = typeof opt.localesCache === 'object' ? opt.localesCache : {};
 
     // Provide custom API method aliases if desired
     // This needs to be processed before the first call to applyAPItoObject()
@@ -99,68 +98,63 @@ module.exports = (function() {
     }
 
     // sets a custom cookie name to parse locale settings from
-    cookiename = (typeof opt.cookie === 'string') ? opt.cookie : null;
+    cookiename = typeof opt.cookie === 'string' ? opt.cookie : null;
 
     // query-string parameter to be watched - @todo: add test & doc
-    queryParameter = (typeof opt.queryParameter === 'string') ? opt.queryParameter : null;
+    queryParameter = typeof opt.queryParameter === 'string' ? opt.queryParameter : null;
 
     // where to store json files
-    directory = (typeof opt.directory === 'string') ?
-      opt.directory : path.join(__dirname, 'locales');
+    directory = typeof opt.directory === 'string' ? opt.directory : path.join(__dirname, 'locales');
 
     // permissions when creating new directories
-    directoryPermissions = (typeof opt.directoryPermissions === 'string') ?
-      parseInt(opt.directoryPermissions, 8) : null;
+    directoryPermissions = typeof opt.directoryPermissions === 'string' ? parseInt(opt.directoryPermissions, 8) : null;
 
     // write new locale information to disk
-    updateFiles = (typeof opt.updateFiles === 'boolean') ? opt.updateFiles : true;
+    updateFiles = typeof opt.updateFiles === 'boolean' ? opt.updateFiles : true;
 
     // sync locale information accros all files
-    syncFiles = (typeof opt.syncFiles === 'boolean') ? opt.syncFiles : false;
+    syncFiles = typeof opt.syncFiles === 'boolean' ? opt.syncFiles : false;
 
     // what to use as the indentation unit (ex: "\t", "  ")
-    indent = (typeof opt.indent === 'string') ? opt.indent : '\t';
+    indent = typeof opt.indent === 'string' ? opt.indent : '\t';
 
     // json files prefix
-    prefix = (typeof opt.prefix === 'string') ? opt.prefix : '';
+    prefix = typeof opt.prefix === 'string' ? opt.prefix : '';
 
     // where to store json files
-    extension = (typeof opt.extension === 'string') ? opt.extension : '.json';
+    extension = typeof opt.extension === 'string' ? opt.extension : '.json';
 
     // setting defaultLocale
-    defaultLocale = (typeof opt.defaultLocale === 'string') ? opt.defaultLocale : 'en';
+    defaultLocale = typeof opt.defaultLocale === 'string' ? opt.defaultLocale : 'en';
 
     // auto reload locale files when changed
-    autoReload = (typeof opt.autoReload === 'boolean') ? opt.autoReload : false;
+    autoReload = typeof opt.autoReload === 'boolean' ? opt.autoReload : false;
 
     // enable object notation?
-    objectNotation = (typeof opt.objectNotation !== 'undefined') ? opt.objectNotation : false;
+    objectNotation = typeof opt.objectNotation !== 'undefined' ? opt.objectNotation : false;
     if (objectNotation === true) objectNotation = '.';
 
     // read language fallback map
-    fallbacks = (typeof opt.fallbacks === 'object') ? opt.fallbacks : {};
+    fallbacks = typeof opt.fallbacks === 'object' ? opt.fallbacks : {};
 
     // setting custom logger functions
-    logDebugFn = (typeof opt.logDebugFn === 'function') ? opt.logDebugFn : debug;
-    logWarnFn = (typeof opt.logWarnFn === 'function') ? opt.logWarnFn : warn;
-    logErrorFn = (typeof opt.logErrorFn === 'function') ? opt.logErrorFn : error;
+    logDebugFn = typeof opt.logDebugFn === 'function' ? opt.logDebugFn : debug;
+    logWarnFn = typeof opt.logWarnFn === 'function' ? opt.logWarnFn : warn;
+    logErrorFn = typeof opt.logErrorFn === 'function' ? opt.logErrorFn : error;
 
-    preserveLegacyCase = (typeof opt.preserveLegacyCase === 'undefined') ?
-      true : opt.preserveLegacyCase;
+    preserveLegacyCase = typeof opt.preserveLegacyCase === 'undefined' ? true : opt.preserveLegacyCase;
 
     // when missing locales we try to guess that from directory
     opt.locales = opt.locales || guessLocales(directory);
 
     // implicitly read all locales
     if (Array.isArray(opt.locales)) {
-
       opt.locales.forEach(function(l) {
         read(l);
       });
 
       // auto reload locale files when changed
       if (autoReload) {
-
         // watch changes of locale files (it's called twice because fs.watch is still unstable)
         fs.watch(directory, function(event, filename) {
           var localeFromFile = guessLocaleFromFile(filename);
@@ -169,7 +163,6 @@ module.exports = (function() {
             logDebug('Auto reloading locale file "' + filename + '".');
             read(localeFromFile);
           }
-
         });
       }
     }
@@ -177,7 +170,6 @@ module.exports = (function() {
 
   i18n.init = function i18nInit(request, response, next) {
     if (typeof request === 'object') {
-
       // guess requested language/locale
       guessLanguage(request);
 
@@ -285,24 +277,31 @@ module.exports = (function() {
 
   i18n.__l = function i18nTranslationList(phrase) {
     var translations = [];
-    Object.keys(locales).sort().forEach(function(l) {
-      translations.push(i18n.__({ phrase: phrase, locale: l }));
-    });
+    Object.keys(this.__locales__)
+      .sort()
+      .forEach(function(l) {
+        translations.push(i18n.__({ phrase: phrase, locale: l }));
+      });
     return translations;
   };
 
   i18n.__h = function i18nTranslationHash(phrase) {
     var translations = [];
-    Object.keys(locales).sort().forEach(function(l) {
-      var hash = {};
-      hash[l] = i18n.__({ phrase: phrase, locale: l });
-      translations.push(hash);
-    });
+    Object.keys(this.__locales__)
+      .sort()
+      .forEach(function(l) {
+        var hash = {};
+        hash[l] = i18n.__({ phrase: phrase, locale: l });
+        translations.push(hash);
+      });
     return translations;
   };
 
   i18n.__n = function i18nTranslatePlural(singular, plural, count) {
-    var msg, namedValues, targetLocale, args = [];
+    var msg,
+      namedValues,
+      targetLocale,
+      args = [];
 
     // Accept an object with named values as the last parameter
     if (argsEndWithNamedObject(arguments)) {
@@ -368,8 +367,12 @@ module.exports = (function() {
         p = PluralsForLocale[targetLocale];
       } else {
         // split locales with a region code
-        var lc = targetLocale.toLowerCase().split(/[_-\s]+/)
-          .filter(function(el){ return true && el; });
+        var lc = targetLocale
+          .toLowerCase()
+          .split(/[_-\s]+/)
+          .filter(function(el) {
+            return true && el;
+          });
         // take the first part of locale, fallback to full locale
         p = MakePlural[lc[0] || targetLocale];
         PluralsForLocale[targetLocale] = p;
@@ -384,7 +387,6 @@ module.exports = (function() {
   };
 
   i18n.setLocale = function i18nSetLocale(object, locale, skipImplicitObjects) {
-
     // when given an array of objects => setLocale on each
     if (Array.isArray(object) && typeof locale === 'string') {
       for (var i = object.length - 1; i >= 0; i--) {
@@ -404,12 +406,12 @@ module.exports = (function() {
     }
 
     // consider a fallback
-    if (!locales[targetLocale] && fallbacks[targetLocale]) {
+    if (!this.__locales__[targetLocale] && fallbacks[targetLocale]) {
       targetLocale = fallbacks[targetLocale];
     }
 
     // now set locale on object
-    targetObject.locale = locales[targetLocale] ? targetLocale : defaultLocale;
+    targetObject.locale = this.__locales__[targetLocale] ? targetLocale : defaultLocale;
 
     // consider any extra registered objects
     if (typeof register === 'object') {
@@ -424,7 +426,6 @@ module.exports = (function() {
 
     // consider res
     if (targetObject.res && !skipImplicitObjects) {
-
       // escape recursion
       // @see  - https://github.com/balderdashy/sails/pull/3631
       //       - https://github.com/mashpie/i18n-node/pull/218
@@ -438,7 +439,6 @@ module.exports = (function() {
 
     // consider locals
     if (targetObject.locals && !skipImplicitObjects) {
-
       // escape recursion
       // @see  - https://github.com/balderdashy/sails/pull/3631
       //       - https://github.com/mashpie/i18n-node/pull/218
@@ -454,7 +454,6 @@ module.exports = (function() {
   };
 
   i18n.getLocale = function i18nGetLocale(request) {
-
     // called like i18n.getLocale(req)
     if (request && request.locale) {
       return request.locale;
@@ -483,11 +482,7 @@ module.exports = (function() {
     }
 
     // called like req.getCatalog()
-    if (!targetLocale &&
-      object === undefined &&
-      locale === undefined &&
-      typeof this.locale === 'string'
-    ) {
+    if (!targetLocale && object === undefined && locale === undefined && typeof this.locale === 'string') {
       if (register && register.global) {
         targetLocale = '';
       } else {
@@ -497,15 +492,15 @@ module.exports = (function() {
 
     // called like i18n.getCatalog()
     if (targetLocale === undefined || targetLocale === '') {
-      return locales;
+      return this.__locales__;
     }
 
-    if (!locales[targetLocale] && fallbacks[targetLocale]) {
+    if (!this.__locales__[targetLocale] && fallbacks[targetLocale]) {
       targetLocale = fallbacks[targetLocale];
     }
 
-    if (locales[targetLocale]) {
-      return locales[targetLocale];
+    if (this.__locales__[targetLocale]) {
+      return this.__locales__[targetLocale];
     } else {
       logWarn('No catalog found for "' + targetLocale + '"');
       return false;
@@ -513,7 +508,7 @@ module.exports = (function() {
   };
 
   i18n.getLocales = function i18nGetLocales() {
-    return Object.keys(locales);
+    return Object.keys(this.__locales__);
   };
 
   i18n.addLocale = function i18nAddLocale(locale) {
@@ -521,7 +516,7 @@ module.exports = (function() {
   };
 
   i18n.removeLocale = function i18nRemoveLocale(locale) {
-    delete locales[locale];
+    delete this.__locales__[locale];
   };
 
   // ===================
@@ -529,9 +524,8 @@ module.exports = (function() {
   // ===================
 
   var postProcess = function(msg, namedValues, args, count) {
-
     // test for parsable interval string
-    if ((/\|/).test(msg)) {
+    if (/\|/.test(msg)) {
       msg = parsePluralInterval(msg, count);
     }
 
@@ -541,13 +535,13 @@ module.exports = (function() {
     }
 
     // if the msg string contains {{Mustache}} patterns we render it as a mini tempalate
-    if ((/{{.*}}/).test(msg)) {
+    if (/{{.*}}/.test(msg)) {
       msg = Mustache.render(msg, namedValues);
     }
 
     // if we have extra arguments with values to get replaced,
     // an additional substition injects those strings afterwards
-    if ((/%/).test(msg) && args && args.length > 0) {
+    if (/%/.test(msg) && args && args.length > 0) {
       msg = vsprintf(msg, args);
     }
 
@@ -555,9 +549,7 @@ module.exports = (function() {
   };
 
   var argsEndWithNamedObject = function(args) {
-    return (args.length > 1 &&
-      args[args.length - 1] !== null &&
-      typeof args[args.length - 1] === 'object');
+    return args.length > 1 && args[args.length - 1] !== null && typeof args[args.length - 1] === 'object';
   };
 
   var parseArgv = function(args) {
@@ -578,7 +570,6 @@ module.exports = (function() {
    * registers all public API methods to a given response object when not already declared
    */
   var applyAPItoObject = function(object) {
-
     var alreadySetted = true;
 
     // attach to itself if not provided
@@ -650,7 +641,7 @@ module.exports = (function() {
 
   var guessLanguage = function(request) {
     if (typeof request === 'object') {
-      var languageHeader = request.headers? request.headers['accept-language'] : undefined,
+      var languageHeader = request.headers ? request.headers['accept-language'] : undefined,
         languages = [],
         regions = [];
 
@@ -683,7 +674,9 @@ module.exports = (function() {
       // 'accept-language' is the most common source
       if (languageHeader) {
         var acceptedLanguages = getAcceptedLanguagesFromHeader(languageHeader),
-          match, fallbackMatch, fallback;
+          match,
+          fallbackMatch,
+          fallback;
         for (var i = 0; i < acceptedLanguages.length; i++) {
           var lang = acceptedLanguages[i],
             lr = lang.split('-', 2),
@@ -697,7 +690,7 @@ module.exports = (function() {
             // where the original, unsupported language existed.
             var acceptedLanguageIndex = acceptedLanguages.indexOf(lang);
             var fallbackIndex = acceptedLanguages.indexOf(fallback);
-            if(fallbackIndex > -1) {
+            if (fallbackIndex > -1) {
               acceptedLanguages.splice(fallbackIndex, 1);
             }
             acceptedLanguages.splice(acceptedLanguageIndex + 1, 0, fallback);
@@ -721,12 +714,12 @@ module.exports = (function() {
             regions.push(region.toLowerCase());
           }
 
-          if (!match && locales[lang]) {
+          if (!match && this.__locales__[lang]) {
             match = lang;
             break;
           }
 
-          if (!fallbackMatch && locales[parentLang]) {
+          if (!fallbackMatch && this.__locales__[parentLang]) {
             fallbackMatch = parentLang;
           }
         }
@@ -747,22 +740,25 @@ module.exports = (function() {
   var getAcceptedLanguagesFromHeader = function(header) {
     var languages = header.split(','),
       preferences = {};
-    return languages.map(function parseLanguagePreference(item) {
-      var preferenceParts = item.trim().split(';q=');
-      if (preferenceParts.length < 2) {
-        preferenceParts[1] = 1.0;
-      } else {
-        var quality = parseFloat(preferenceParts[1]);
-        preferenceParts[1] = quality ? quality : 0.0;
-      }
-      preferences[preferenceParts[0]] = preferenceParts[1];
+    return languages
+      .map(function parseLanguagePreference(item) {
+        var preferenceParts = item.trim().split(';q=');
+        if (preferenceParts.length < 2) {
+          preferenceParts[1] = 1.0;
+        } else {
+          var quality = parseFloat(preferenceParts[1]);
+          preferenceParts[1] = quality ? quality : 0.0;
+        }
+        preferences[preferenceParts[0]] = preferenceParts[1];
 
-      return preferenceParts[0];
-    }).filter(function(lang) {
-      return preferences[lang] > 0;
-    }).sort(function sortLanguages(a, b) {
-      return preferences[b] - preferences[a];
-    });
+        return preferenceParts[0];
+      })
+      .filter(function(lang) {
+        return preferences[lang] > 0;
+      })
+      .sort(function sortLanguages(a, b) {
+        return preferences[b] - preferences[a];
+      });
   };
 
   /**
@@ -800,7 +796,6 @@ module.exports = (function() {
       } else {
         returnPhrase = p;
       }
-
     });
     return returnPhrase;
   };
@@ -823,8 +818,10 @@ module.exports = (function() {
         return interval.to.included;
       }
 
-      return (Math.min(interval.from.value, number) === interval.from.value &&
-        Math.max(interval.to.value, number) === interval.to.value);
+      return (
+        Math.min(interval.from.value, number) === interval.from.value &&
+        Math.max(interval.to.value, number) === interval.to.value
+      );
     }
     return false;
   };
@@ -833,33 +830,36 @@ module.exports = (function() {
    * read locale file, translate a msg and write to fs if new
    */
   var translate = function(locale, singular, plural, skipSyncToAllFiles) {
-
     // add same key to all translations
     if (!skipSyncToAllFiles && syncFiles) {
       syncToAllFiles(singular, plural);
     }
 
     if (locale === undefined) {
-      logWarn('WARN: No locale found - check the context of the call to __(). Using ' +
-        defaultLocale + ' as current locale');
+      logWarn(
+        'WARN: No locale found - check the context of the call to __(). Using ' + defaultLocale + ' as current locale'
+      );
       locale = defaultLocale;
     }
 
-    if (!locales[locale] && fallbacks[locale]) {
+    if (!this.__locales__[locale] && fallbacks[locale]) {
       locale = fallbacks[locale];
     }
 
     // attempt to read when defined as valid locale
-    if (!locales[locale]) {
+    if (!this.__locales__[locale]) {
       read(locale);
     }
 
     // fallback to default when missed
-    if (!locales[locale]) {
-
-      logWarn('WARN: Locale ' + locale +
-        ' couldn\'t be read - check the context of the call to $__. Using ' +
-        defaultLocale + ' (default) as current locale');
+    if (!this.__locales__[locale]) {
+      logWarn(
+        'WARN: Locale ' +
+          locale +
+          ' is unreadable - check the context of the call to $__. Using ' +
+          defaultLocale +
+          ' (default) as current locale'
+      );
 
       locale = defaultLocale;
       read(locale);
@@ -889,16 +889,16 @@ module.exports = (function() {
     var mutator = localeMutator(locale, singular);
 
     if (plural) {
-      if (accessor() == null) {
+      if (accessor() === null) {
         mutator({
-          'one': defaultSingular || singular,
-          'other': defaultPlural || plural
+          one: defaultSingular || singular,
+          other: defaultPlural || plural
         });
         write(locale);
       }
     }
 
-    if (accessor() == null) {
+    if (accessor() === null) {
       mutator(defaultSingular || singular);
       write(locale);
     }
@@ -914,8 +914,10 @@ module.exports = (function() {
     // iterate over locales and translate again
     // this will implicitly write/sync missing keys
     // to the rest of locales
-    for (var l in locales) {
-      translate(l, singular, plural, true);
+    for (var l in this.__locales__) {
+      if ({}.hasOwnProperty.call(this.__locales__, l)) {
+        translate(l, singular, plural, true);
+      }
     }
   };
 
@@ -932,11 +934,11 @@ module.exports = (function() {
    */
   var localeAccessor = function(locale, singular, allowDelayedTraversal) {
     // Bail out on non-existent locales to defend against internal errors.
-    if (!locales[locale]) return Function.prototype;
+    if (!this.__locales__[locale]) return Function.prototype;
 
     // Handle object lookup notation
     var indexOfDot = objectNotation && singular.lastIndexOf(objectNotation);
-    if (objectNotation && (0 < indexOfDot && indexOfDot < singular.length - 1)) {
+    if (objectNotation && 0 < indexOfDot && indexOfDot < singular.length - 1) {
       // If delayed traversal wasn't specifically forbidden, it is allowed.
       if (typeof allowDelayedTraversal === 'undefined') allowDelayedTraversal = true;
       // The accessor we're trying to find and which we want to return.
@@ -965,20 +967,18 @@ module.exports = (function() {
         };
         // Return a reference to the next deeper level in the locale tree.
         return object[index];
-
-      }, locales[locale]);
+      }, this.__locales__[locale]);
       // Return the requested accessor.
       return function() {
         // If we need to re-traverse (because we didn't find our target term)
         // traverse again and return the new result (but don't allow further iterations)
         // or return the previously found accessor if it was already valid.
-        return (reTraverse) ? localeAccessor(locale, singular, false)() : accessor();
+        return reTraverse ? localeAccessor(locale, singular, false)() : accessor();
       };
-
     } else {
       // No object notation, just return an accessor that performs array lookup.
       return function() {
-        return locales[locale][singular];
+        return this.__locales__[locale][singular];
       };
     }
   };
@@ -998,11 +998,11 @@ module.exports = (function() {
    */
   var localeMutator = function(locale, singular, allowBranching) {
     // Bail out on non-existent locales to defend against internal errors.
-    if (!locales[locale]) return Function.prototype;
+    if (!this.__locales__[locale]) return Function.prototype;
 
     // Handle object lookup notation
     var indexOfDot = objectNotation && singular.lastIndexOf(objectNotation);
-    if (objectNotation && (0 < indexOfDot && indexOfDot < singular.length - 1)) {
+    if (objectNotation && 0 < indexOfDot && indexOfDot < singular.length - 1) {
       // If branching wasn't specifically allowed, disable it.
       if (typeof allowBranching === 'undefined') allowBranching = false;
       // This will become the function we want to return.
@@ -1052,8 +1052,7 @@ module.exports = (function() {
 
         // Return a reference to the next deeper level in the locale tree.
         return object[index];
-
-      }, locales[locale]);
+      }, this.__locales__[locale]);
 
       // Return the final mutator.
       return function(value) {
@@ -1061,13 +1060,12 @@ module.exports = (function() {
         // invoke the search again, but allow branching
         // this time (because here the mutator is being invoked)
         // otherwise, just change the value directly.
-        return (reTraverse) ? localeMutator(locale, singular, true)(value) : accessor(value);
+        return reTraverse ? localeMutator(locale, singular, true)(value) : accessor(value);
       };
-
     } else {
       // No object notation, just return a mutator that performs array lookup and changes the value.
       return function(value) {
-        locales[locale][singular] = value;
+        this.__locales__[locale][singular] = value;
         return value;
       };
     }
@@ -1084,10 +1082,9 @@ module.exports = (function() {
       localeFile = fs.readFileSync(file);
       try {
         // parsing filecontents to locales[locale]
-        locales[locale] = JSON.parse(localeFile);
+        this.__locales__[locale] = JSON.parse(localeFile);
       } catch (parseError) {
-        logError('unable to parse locales from file (maybe ' +
-          file + ' is empty or invalid json?): ', parseError);
+        logError('unable to parse locales from file (maybe ' + file + ' is empty or invalid json?): ', parseError);
       }
     } catch (readError) {
       // unable to read, so intialize that file
@@ -1125,25 +1122,23 @@ module.exports = (function() {
     }
 
     // first time init has an empty file
-    if (!locales[locale]) {
-      locales[locale] = {};
+    if (!this.__locales__[locale]) {
+      this.__locales__[locale] = {};
     }
 
     // writing to tmp and rename on success
     try {
       target = getStorageFilePath(locale);
       tmp = target + '.tmp';
-      fs.writeFileSync(tmp, JSON.stringify(locales[locale], null, indent), 'utf8');
+      fs.writeFileSync(tmp, JSON.stringify(this.__locales__[locale], null, indent), 'utf8');
       stats = fs.statSync(tmp);
       if (stats.isFile()) {
         fs.renameSync(tmp, target);
       } else {
-        logError('unable to write locales to file (either ' +
-          tmp + ' or ' + target + ' are not writeable?): ');
+        logError('unable to write locales to file (either ' + tmp + ' or ' + target + ' are not writeable?): ');
       }
     } catch (e) {
-      logError('unexpected error writing files (either ' +
-        tmp + ' or ' + target + ' are not writeable?): ', e);
+      logError('unexpected error writing files (either ' + tmp + ' or ' + target + ' are not writeable?): ', e);
     }
   };
 
@@ -1184,5 +1179,6 @@ module.exports = (function() {
   }
 
   return i18n;
+};
 
-}());
+module.exports = factory();

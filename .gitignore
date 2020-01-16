@@ -9,3 +9,5 @@ coverage/
 defaultlocales
 localestowrite
 localesmakeplural
+.vscode
+.history
