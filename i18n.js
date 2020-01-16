@@ -496,7 +496,7 @@ class Factory {
       return Object.keys(instance.__locales__);
     };
 
-    this.this.i18n.addLocale = function i18nAddLocale(locale) {
+    this.i18n.addLocale = function i18nAddLocale(locale) {
       read(locale);
     };
 
