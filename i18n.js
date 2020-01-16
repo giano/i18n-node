@@ -26,6 +26,7 @@ const vsprintf = require('sprintf-js').vsprintf,
 class Factory {
   constructor(localesCache) {
     const instance = this;
+    //
     this.MessageformatInstanceForLocale = {};
     this.PluralsForLocale = {};
     this.api = {
@@ -1164,9 +1165,9 @@ class Factory {
     function logError(msg) {
       instance.logErrorFn(msg);
     }
+
+    return this.i18n;
   }
 }
 
-module.exports = exports.default = function(languagesCache) {
-  return new Factory(languagesCache).i18n;
-};
+module.exports = exports.default = Factory;
