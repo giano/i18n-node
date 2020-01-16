@@ -26,6 +26,7 @@ var vsprintf = require('sprintf-js').vsprintf,
 const factory = function() {
   var MessageformatInstanceForLocale = {},
     PluralsForLocale = {},
+    locales = {},
     api = {
       __: '__',
       __n: '__n',
@@ -61,14 +62,16 @@ const factory = function() {
 
   // public exports
   var i18n = {
-    __locales__: {}
+    __locales__: locales
   };
 
   i18n.version = '0.8.3';
 
+  // eslint-disable-next-line complexity
   i18n.configure = function i18nConfigure(opt) {
     // reset locales or inherit an external cache object
-    i18n.__locales__ = typeof opt.localesCache === 'object' ? opt.localesCache : {};
+    i18n.__locales__ =
+      opt.localesCache === true ? {} : typeof opt.localesCache === 'object' ? opt.localesCache : locales;
 
     // Provide custom API method aliases if desired
     // This needs to be processed before the first call to applyAPItoObject()
