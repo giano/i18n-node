@@ -68,7 +68,7 @@ const factory = function() {
 
   i18n.configure = function i18nConfigure(opt) {
     // reset locales or inherit an external cache object
-    this.__locales__ = typeof opt.localesCache === 'object' ? opt.localesCache : {};
+    i18n.__locales__ = typeof opt.localesCache === 'object' ? opt.localesCache : {};
 
     // Provide custom API method aliases if desired
     // This needs to be processed before the first call to applyAPItoObject()
@@ -277,7 +277,7 @@ const factory = function() {
 
   i18n.__l = function i18nTranslationList(phrase) {
     var translations = [];
-    Object.keys(this.__locales__)
+    Object.keys(i18n.__locales__)
       .sort()
       .forEach(function(l) {
         translations.push(i18n.__({ phrase: phrase, locale: l }));
@@ -287,7 +287,7 @@ const factory = function() {
 
   i18n.__h = function i18nTranslationHash(phrase) {
     var translations = [];
-    Object.keys(this.__locales__)
+    Object.keys(i18n.__locales__)
       .sort()
       .forEach(function(l) {
         var hash = {};
@@ -406,12 +406,12 @@ const factory = function() {
     }
 
     // consider a fallback
-    if (!this.__locales__[targetLocale] && fallbacks[targetLocale]) {
+    if (!i18n.__locales__[targetLocale] && fallbacks[targetLocale]) {
       targetLocale = fallbacks[targetLocale];
     }
 
     // now set locale on object
-    targetObject.locale = this.__locales__[targetLocale] ? targetLocale : defaultLocale;
+    targetObject.locale = i18n.__locales__[targetLocale] ? targetLocale : defaultLocale;
 
     // consider any extra registered objects
     if (typeof register === 'object') {
@@ -492,15 +492,15 @@ const factory = function() {
 
     // called like i18n.getCatalog()
     if (targetLocale === undefined || targetLocale === '') {
-      return this.__locales__;
+      return i18n.__locales__;
     }
 
-    if (!this.__locales__[targetLocale] && fallbacks[targetLocale]) {
+    if (!i18n.__locales__[targetLocale] && fallbacks[targetLocale]) {
       targetLocale = fallbacks[targetLocale];
     }
 
-    if (this.__locales__[targetLocale]) {
-      return this.__locales__[targetLocale];
+    if (i18n.__locales__[targetLocale]) {
+      return i18n.__locales__[targetLocale];
     } else {
       logWarn('No catalog found for "' + targetLocale + '"');
       return false;
@@ -508,7 +508,7 @@ const factory = function() {
   };
 
   i18n.getLocales = function i18nGetLocales() {
-    return Object.keys(this.__locales__);
+    return Object.keys(i18n.__locales__);
   };
 
   i18n.addLocale = function i18nAddLocale(locale) {
@@ -516,7 +516,7 @@ const factory = function() {
   };
 
   i18n.removeLocale = function i18nRemoveLocale(locale) {
-    delete this.__locales__[locale];
+    delete i18n.__locales__[locale];
   };
 
   // ===================
@@ -714,12 +714,12 @@ const factory = function() {
             regions.push(region.toLowerCase());
           }
 
-          if (!match && this.__locales__[lang]) {
+          if (!match && i18n.__locales__[lang]) {
             match = lang;
             break;
           }
 
-          if (!fallbackMatch && this.__locales__[parentLang]) {
+          if (!fallbackMatch && i18n.__locales__[parentLang]) {
             fallbackMatch = parentLang;
           }
         }
@@ -842,17 +842,17 @@ const factory = function() {
       locale = defaultLocale;
     }
 
-    if (!this.__locales__[locale] && fallbacks[locale]) {
+    if (!i18n.__locales__[locale] && fallbacks[locale]) {
       locale = fallbacks[locale];
     }
 
     // attempt to read when defined as valid locale
-    if (!this.__locales__[locale]) {
+    if (!i18n.__locales__[locale]) {
       read(locale);
     }
 
     // fallback to default when missed
-    if (!this.__locales__[locale]) {
+    if (!i18n.__locales__[locale]) {
       logWarn(
         'WARN: Locale ' +
           locale +
@@ -914,8 +914,8 @@ const factory = function() {
     // iterate over locales and translate again
     // this will implicitly write/sync missing keys
     // to the rest of locales
-    for (var l in this.__locales__) {
-      if ({}.hasOwnProperty.call(this.__locales__, l)) {
+    for (var l in i18n.__locales__) {
+      if ({}.hasOwnProperty.call(i18n.__locales__, l)) {
         translate(l, singular, plural, true);
       }
     }
@@ -934,7 +934,7 @@ const factory = function() {
    */
   var localeAccessor = function(locale, singular, allowDelayedTraversal) {
     // Bail out on non-existent locales to defend against internal errors.
-    if (!this.__locales__[locale]) return Function.prototype;
+    if (!i18n.__locales__[locale]) return Function.prototype;
 
     // Handle object lookup notation
     var indexOfDot = objectNotation && singular.lastIndexOf(objectNotation);
@@ -967,7 +967,7 @@ const factory = function() {
         };
         // Return a reference to the next deeper level in the locale tree.
         return object[index];
-      }, this.__locales__[locale]);
+      }, i18n.__locales__[locale]);
       // Return the requested accessor.
       return function() {
         // If we need to re-traverse (because we didn't find our target term)
@@ -978,7 +978,7 @@ const factory = function() {
     } else {
       // No object notation, just return an accessor that performs array lookup.
       return function() {
-        return this.__locales__[locale][singular];
+        return i18n.__locales__[locale][singular];
       };
     }
   };
@@ -998,7 +998,7 @@ const factory = function() {
    */
   var localeMutator = function(locale, singular, allowBranching) {
     // Bail out on non-existent locales to defend against internal errors.
-    if (!this.__locales__[locale]) return Function.prototype;
+    if (!i18n.__locales__[locale]) return Function.prototype;
 
     // Handle object lookup notation
     var indexOfDot = objectNotation && singular.lastIndexOf(objectNotation);
@@ -1052,7 +1052,7 @@ const factory = function() {
 
         // Return a reference to the next deeper level in the locale tree.
         return object[index];
-      }, this.__locales__[locale]);
+      }, i18n.__locales__[locale]);
 
       // Return the final mutator.
       return function(value) {
@@ -1065,7 +1065,7 @@ const factory = function() {
     } else {
       // No object notation, just return a mutator that performs array lookup and changes the value.
       return function(value) {
-        this.__locales__[locale][singular] = value;
+        i18n.__locales__[locale][singular] = value;
         return value;
       };
     }
@@ -1082,7 +1082,7 @@ const factory = function() {
       localeFile = fs.readFileSync(file);
       try {
         // parsing filecontents to locales[locale]
-        this.__locales__[locale] = JSON.parse(localeFile);
+        i18n.__locales__[locale] = JSON.parse(localeFile);
       } catch (parseError) {
         logError('unable to parse locales from file (maybe ' + file + ' is empty or invalid json?): ', parseError);
       }
@@ -1122,15 +1122,15 @@ const factory = function() {
     }
 
     // first time init has an empty file
-    if (!this.__locales__[locale]) {
-      this.__locales__[locale] = {};
+    if (!i18n.__locales__[locale]) {
+      i18n.__locales__[locale] = {};
     }
 
     // writing to tmp and rename on success
     try {
       target = getStorageFilePath(locale);
       tmp = target + '.tmp';
-      fs.writeFileSync(tmp, JSON.stringify(this.__locales__[locale], null, indent), 'utf8');
+      fs.writeFileSync(tmp, JSON.stringify(i18n.__locales__[locale], null, indent), 'utf8');
       stats = fs.statSync(tmp);
       if (stats.isFile()) {
         fs.renameSync(tmp, target);
