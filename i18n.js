@@ -21,20 +21,6 @@ const vsprintf = require('sprintf-js').vsprintf,
   MakePlural = require('make-plural'),
   parseInterval = require('math-interval-parser').default;
 
-const api = {
-  __: '__',
-  __n: '__n',
-  __l: '__l',
-  __h: '__h',
-  __mf: '__mf',
-  getLocale: 'getLocale',
-  setLocale: 'setLocale',
-  getCatalog: 'getCatalog',
-  getLocales: 'getLocales',
-  addLocale: 'addLocale',
-  removeLocale: 'removeLocale'
-};
-
 // exports an instance
 
 class Factory {
@@ -42,42 +28,19 @@ class Factory {
     const instance = this;
     this.MessageformatInstanceForLocale = {};
     this.PluralsForLocale = {};
-    /*
-    var MessageformatInstanceForLocale = {},
-      PluralsForLocale = {},
-      api = {
-        __: '__',
-        __n: '__n',
-        __l: '__l',
-        __h: '__h',
-        __mf: '__mf',
-        getLocale: 'getLocale',
-        setLocale: 'setLocale',
-        getCatalog: 'getCatalog',
-        getLocales: 'getLocales',
-        addLocale: 'addLocale',
-        removeLocale: 'removeLocale'
-      },
-      pathsep = path.sep, // ---> means win support will be available in node 0.8.x and above
-      autoReload,
-      cookiename,
-      defaultLocale,
-      directory,
-      directoryPermissions,
-      extension,
-      fallbacks,
-      indent,
-      logDebugFn,
-      logErrorFn,
-      logWarnFn,
-      preserveLegacyCase,
-      objectNotation,
-      prefix,
-      queryParameter,
-      register,
-      updateFiles,
-      syncFiles;
-      */
+    this.api = {
+      __: '__',
+      __n: '__n',
+      __l: '__l',
+      __h: '__h',
+      __mf: '__mf',
+      getLocale: 'getLocale',
+      setLocale: 'setLocale',
+      getCatalog: 'getCatalog',
+      getLocales: 'getLocales',
+      addLocale: 'addLocale',
+      removeLocale: 'removeLocale'
+    };
 
     // public exports
     this.i18n = {};
@@ -97,8 +60,8 @@ class Factory {
         for (var method in opt.api) {
           if (opt.api.hasOwnProperty(method)) {
             var alias = opt.api[method];
-            if (typeof api[method] !== 'undefined') {
-              api[method] = alias;
+            if (typeof instance.api[method] !== 'undefined') {
+              instance.api[method] = alias;
             }
           }
         }
@@ -595,9 +558,9 @@ class Factory {
       var alreadySetted = true;
 
       // attach to itself if not provided
-      for (var method in api) {
-        if (api.hasOwnProperty(method)) {
-          var alias = api[method];
+      for (var method in instance.api) {
+        if (instance.api.hasOwnProperty(method)) {
+          var alias = instance.api[method];
 
           // be kind rewind, or better not touch anything already existing
           if (!object[alias]) {
@@ -1172,8 +1135,8 @@ class Factory {
     var getStorageFilePath = function(locale) {
       // changed API to use .json as default, #16
       var ext = instance.extension || '.json',
-        filepath = path.normalize(instance.directory + instance.pathsep + instance.prefix + locale + ext),
-        filepathJS = path.normalize(instance.directory + instance.pathsep + instance.prefix + locale + '.js');
+        filepath = path.normalize(instance.directory + path.sep + instance.prefix + locale + ext),
+        filepathJS = path.normalize(instance.directory + path.sep + instance.prefix + locale + '.js');
       // use .js as fallback if already existing
       try {
         if (fs.statSync(filepathJS)) {
